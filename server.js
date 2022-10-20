@@ -8,7 +8,8 @@ import User from "./src/models/User.js";
 import bcrypt from "bcrypt";
 import passport from "passport";
 import { Strategy } from "passport-local";
-import "./src/db/config.js"
+import "./src/db/config.js";
+import { fork } from "child_process";
 import minimist from "minimist";
 
 const LocalStrategy = Strategy;
@@ -32,26 +33,28 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.use(new LocalStrategy((username,password,done)=>{
-    User.findOne({username}, (err,user)=>{
-      if(err) console.log(err)
-      if(!user) return done(null, false)
-      bcrypt.compare(password,user.password,(err, isMatch)=>{
-        if(err) console.log(err)
-        if(isMatch) return done(null,user)
-        return done(null,false)
-      })
-    })
-}))
+passport.use(
+  new LocalStrategy((username, password, done) => {
+    User.findOne({ username }, (err, user) => {
+      if (err) console.log(err);
+      if (!user) return done(null, false);
+      bcrypt.compare(password, user.password, (err, isMatch) => {
+        if (err) console.log(err);
+        if (isMatch) return done(null, user);
+        return done(null, false);
+      });
+    });
+  })
+);
 
- passport.serializeUser((user,done)=>{
-  done(null, user._id)
- })
+passport.serializeUser((user, done) => {
+  done(null, user._id);
+});
 
- passport.deserializeUser(async(id,done)=>{
-  const user = await User.findByID(id)
-  return done(null,user) 
-})
+passport.deserializeUser(async (id, done) => {
+  const user = await User.findByID(id);
+  return done(null, user);
+});
 
 /*----------- Motor de plantillas -----------*/
 app.set("views", path.join(path.dirname(""), "./src/views"));
@@ -82,10 +85,13 @@ app.get("/login", (req, res) => {
   res.render("login");
 });
 
-app.post("/login", passport.authenticate("local",{failureRedirect: "login-error" })
- ,(req, res) => {
- res.redirect ("/datos")
-});
+app.post(
+  "/login",
+  passport.authenticate("local", { failureRedirect: "login-error" }),
+  (req, res) => {
+    res.redirect("/datos");
+  }
+);
 
 app.get("/register", (req, res) => {
   res.render("register");
@@ -109,37 +115,55 @@ app.post("/register", (req, res) => {
   });
 });
 
-app.get("/datos", async(req, res) => {
-  if(req.user){
-    const datosUsuario = await User.findeById(req.user._id).lean()
-    res.render("datos",{
-      datos:datosUsuario
-    })
-  }else{
-    res.redirect("/login")
-
+app.get("/datos", async (req, res) => {
+  if (req.user) {
+    const datosUsuario = await User.findeById(req.user._id).lean();
+    res.render("datos", {
+      datos: datosUsuario,
+    });
+  } else {
+    res.redirect("/login");
   }
 });
-app.get("/info",(req,res)=>{
-  
-  let datos={
-    argumentos:minimist(process.argv.slice(2)),
-    plataforma:process.platform,
-    versionNode:process.version,
-    memoriaReservada:process.memoryUsage(),
+app.get("/info", (req, res) => {
+  let datos = {
+    argumentos: minimist(process.argv.slice(2)),
+    plataforma: process.platform,
+    versionNode: process.version,
+    memoriaReservada: process.memoryUsage(),
     ejecutable: process.execPath,
-    pid:process.pid,
-    carpetaProyecto:process.cwd(),
-  }
+    pid: process.pid,
+    carpetaProyecto: process.cwd(),
+  };
 
-  res.json(datos)
-})
+  res.json({ datos });
+});
 
+app.get("/api/randoms/:cant", (req, res) => {
+  const calculo = fork("random.js");
+  const num = req.params.cant;
 
-app.get("/api/randoms",(req,res)=>{
+  calculo.on("message", (number) => {
+    if (number == "listo") {
+      calculo.send(num);
+    } else {
+      res.json({ number });
+    }
+  });
+});
+
+app.get("/api/randoms/", (req, res) => {
+  const calculo = fork("random.js");
   
-})
-
+  calculo.on("message", (number) => {
+    if (number == "listo") {
+       calculo.send(100000000);
+      
+    } else {
+      res.json({ number });
+    }
+  });
+});
 
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {
@@ -148,7 +172,7 @@ app.get("/logout", (req, res) => {
 });
 
 /*============================[Servidor]============================*/
-const options = { default: { port:8080 }}
+const options = { default: { port: 8080 } };
 const PORT = minimist(process.argv.slice(2), options);
 const server = app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
