@@ -11,6 +11,7 @@ import { Strategy } from "passport-local";
 import "./src/db/config.js";
 import { fork } from "child_process";
 import minimist from "minimist";
+import { clearScreenDown } from "readline";
 
 const LocalStrategy = Strategy;
 
@@ -139,9 +140,9 @@ app.get("/info", (req, res) => {
   res.json({ datos });
 });
 
-app.get("/api/randoms/:cant", (req, res) => {
+/* app.get("/api/randoms/", (req, res) => {
   const calculo = fork("random.js");
-  const num = req.params.cant;
+  const num = req.query.cant;
 
   calculo.on("message", (number) => {
     if (number == "listo") {
@@ -150,19 +151,29 @@ app.get("/api/randoms/:cant", (req, res) => {
       res.json({ number });
     }
   });
-});
+}); */
 
-app.get("/api/randoms/", (req, res) => {
+app.get("/api/randoms", (req, res) => {
   const calculo = fork("random.js");
-  
-  calculo.on("message", (number) => {
-    if (number == "listo") {
-       calculo.send(100000000);
-      
-    } else {
-      res.json({ number });
-    }
-  });
+  const num = req.query.cant;
+  console.log(num)
+  if (num) {
+    calculo.on("message", (number) => {
+      if (number == "listo") {
+        calculo.send(num);
+      } else {
+        res.json({ number });
+      }
+    });
+  } else {
+    calculo.on("message", (number) => {
+      if (number == "listo") {
+        calculo.send(100000000);
+      } else {
+        res.json({ number });
+      }
+    });
+  }
 });
 
 app.get("/logout", (req, res) => {

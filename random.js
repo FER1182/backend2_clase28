@@ -17,14 +17,15 @@ process.on("message", (msg) => {
     
     const arrOrdenado = arr.sort()
     let cont = 1
-   /*  for (let i=1; i<arrOrdenado.length;i++){
+     for (let i=1; i<arrOrdenado.length;i++){
         if(arrOrdenado[i+1] === arrOrdenado [i]){
             cont++
         }else{
-            obj.arrOrdenado[i]=cont;
+            obj[arrOrdenado[i]]=cont;
+           
             cont = 1
         }
-    } */
+    }
     
     
    
@@ -33,7 +34,7 @@ process.on("message", (msg) => {
 
   const random = generator(msg)
 
-  process.send(JSON.stringify(random)+"hola")
+  process.send((random))
   process.end
 });
 
